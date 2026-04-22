@@ -1,20 +1,19 @@
 using Microsoft.AspNetCore.Components;
-using Soenneker.Tests.FixturedUnit;
-using Xunit;
+using Soenneker.Tests.HostedUnit;
 
 namespace Soenneker.Blazor.StaticNavigationManagers.Tests;
 
-[Collection("Collection")]
-public sealed class StaticNavigationManagerTests : FixturedUnitTest
+[ClassDataSource<Host>(Shared = SharedType.PerTestSession)]
+public sealed class StaticNavigationManagerTests : HostedUnitTest
 {
     private readonly NavigationManager _util;
 
-    public StaticNavigationManagerTests(Fixture fixture, ITestOutputHelper output) : base(fixture, output)
+    public StaticNavigationManagerTests(Host host) : base(host)
     {
         _util = Resolve<NavigationManager>(true);
     }
 
-    [Fact]
+    [Test]
     public void Default()
     {
 
