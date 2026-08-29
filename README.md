@@ -5,38 +5,52 @@
 
 # Soenneker.Blazor.StaticNavigationManagers
 
-Provides a stubbed NavigationManager for static or design-time rendering where navigation is intentionally disabled.
+A no-op `NavigationManager` for isolated component rendering, previews, and tests where no browser or navigation host exists.
 
-## Install
+## Installation
 
 ```bash
 dotnet add package Soenneker.Blazor.StaticNavigationManagers
 ```
 
-## Quick start
+## Registration
+
+Choose the lifetime that matches the service graph used by your renderer:
 
 ```csharp
 using Soenneker.Blazor.StaticNavigationManagers.Registrars;
-using Microsoft.Extensions.DependencyInjection;
 
-var services = new ServiceCollection();
-var result = services.AddStaticNavigationManagerAsSingleton();
+services.AddStaticNavigationManagerAsSingleton();
 ```
 
-Adds `StaticNavigationManager` as a singleton service.
+or:
 
-## What you get
+```csharp
+services.AddStaticNavigationManagerAsScoped();
+```
 
-- `StaticNavigationManagerRegistrar` — Provides a stubbed NavigationManager for static or design-time rendering where navigation is intentionally disabled.
-- `StaticNavigationManager` — Provides a navigation manager implementation for static rendering scenarios where navigation is not supported.
+Both methods register the instance as Blazor's `NavigationManager`, so components can inject their normal dependency:
 
-## API at a glance
+```razor
+@inject NavigationManager Navigation
 
-| API | What it does | Result / important behavior |
-| --- | --- | --- |
-| `StaticNavigationManagerRegistrar.AddStaticNavigationManagerAsSingleton(services)` | Adds `StaticNavigationManager` as a singleton service. | The same service collection, so additional registrations can be chained. |
-| `StaticNavigationManagerRegistrar.AddStaticNavigationManagerAsScoped(services)` | Adds `StaticNavigationManager` as a scoped service. | The same service collection, so additional registrations can be chained. |
+<button @onclick="() => Navigation.NavigateTo('/next')">Next</button>
+```
 
-## Important behavior
+With this implementation the click handler completes, but the URI does not change and no navigation event is raised.
 
-- `StaticNavigationManager`: This class is intended for use in environments where interactive navigation is unnecessary or unavailable, such as during prerendering or static site generation. Attempts to navigate using this manager will have no effect.
+## Exact behavior
+
+- `BaseUri` and `Uri` are both initialized to `https://localhost/`.
+- Relative URI helpers therefore resolve against that placeholder origin.
+- `NavigateTo(...)` and operations routed through it have no effect.
+- The manager does not detect prerendering, static SSR, or interactivity.
+- The registration methods use `TryAdd`; they do not replace a `NavigationManager` that is already registered.
+
+That last point makes registration order significant. Add this service only to the standalone service collection used for static rendering or tests, before resolving components from it.
+
+## When not to use it
+
+Do not register this manager in an interactive Blazor application. It disables navigation rather than adapting it to the current render mode, and its placeholder origin is unsuitable for generating production absolute URLs.
+
+Do not rely on a swallowed navigation call to enforce authentication or authorization. If a component normally redirects unauthorized users, this manager will leave the component rendering; access control must be enforced independently by the host and data layer.
